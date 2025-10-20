@@ -10,8 +10,13 @@ function! s:EnterTailMode()
     return
   endif
   let l:orig_buf = bufnr('%')
+  let l:orig_win = win_getid()
   " Create a terminal buffer with less +F
-  let l:buf = term_start(['less', '+F', l:file], {'hidden': 1, 'term_name': 'tail: ' . l:file, 'exit_cb': function('s:OnTermExit')})
+  let l:buf = term_start(['less', '+F', l:file], {
+        \ 'hidden': 1,
+        \ 'term_name': 'tail: ' . l:file,
+        \ 'exit_cb': function('s:OnTermExit')
+        \ })
   if l:buf == 0
     echo "Failed to create terminal"
     return
@@ -22,6 +27,7 @@ function! s:EnterTailMode()
   setlocal bufhidden=wipe
   let b:tail_mode = 1
   let b:orig_buf = l:orig_buf
+  let b:orig_win = l:orig_win
 endfunction
 
 " Define the <Plug> mapping for entering tail mode
@@ -41,10 +47,17 @@ function! s:OnTermExit(job, status)
   endfor
   if l:buf != -1
     let l:orig_buf = getbufvar(l:buf, 'orig_buf', -1)
-    if l:orig_buf != -1
-      " Switch to original buffer
-      execute 'buffer ' . l:orig_buf
-      checktime
+    let l:orig_win = getbufvar(l:buf, 'orig_win', -1)
+    if l:orig_buf != -1 && bufexists(l:orig_buf)
+      if l:orig_win != -1 && win_id2win(l:orig_win) != 0
+        " Switch the original window to the buffer
+        call win_execute(l:orig_win, 'buffer ' . l:orig_buf)
+        call win_execute(l:orig_win, 'checktime')
+      else
+        " Fallback: switch current window
+        execute 'buffer ' . l:orig_buf
+        checktime
+      endif
     endif
   endif
 endfunction

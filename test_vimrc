@@ -2,3 +2,5 @@ set nocompatible
 let &rtp .= ',' . expand('<sfile>:p:h')
 syntax on
 filetype plugin on
+set nomore
+set belloff=all
